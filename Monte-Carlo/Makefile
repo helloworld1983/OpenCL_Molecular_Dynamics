@@ -5,6 +5,7 @@
 TARGET = MCHost
 TARGET_GPU = MCHost_GPU
 TARGET_CPU = MCHost_CPU
+TARGET_IOCL = MCHost_IOCL
 
 # Where is the Altera SDK for OpenCL software?
 ifeq ($(wildcard $(ALTERAOCLSDKROOT)),)
@@ -31,6 +32,10 @@ AOCL_LINK_CONFIG=$(shell aocl link-config --arm)
 GPU_INCLUDE = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include"
 GPU_LIB = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\Win32"
 
+#INTEL GPU COMPILATION
+IOCL_INCLUDE = "$(INTELOCLSDKROOT)\include"
+IOCL_LIB =  "$(INTELOCLSDKROOT)\lib\x86"
+
 #OPENMP COMPILATION
 SRCS_CPU = mc_cpu.cpp
 SRCS_CPU_FILES = $(foreach F, $(SRCS_CPU), openmp_implementation/$(F))
@@ -42,8 +47,11 @@ gpu :
 	g++ $(SRCS_FILES) -I $(GPU_INCLUDE) -I $(HEADERS) -D NVIDIA -L $(GPU_LIB) -o $(TARGET_GPU) -lOpenCL
 
 cpu :
-	g++ $(SRCS_CPU_FILES) -I $(HEADERS) -O3 -o $(TARGET_CPU) -fopenmp
-# Standard make targets
+	g++ $(SRCS_CPU_FILES) -I $(HEADERS) -O3 -o $(TARGET_CPU) -fopenmp -w
+
+intel :
+	g++ $(SRCS_FILES) -I $(IOCL_INCLUDE) -I $(HEADERS) -D IOCL -L $(IOCL_LIB) -o $(TARGET_IOCL) -lOpenCL -w
+
 clean :
 	@rm -f *.o $(TARGET)
 	@rm -f *.o $(TARGET_CPU)

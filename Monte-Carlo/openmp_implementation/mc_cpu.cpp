@@ -31,7 +31,7 @@ int main()
     time_t t;
     time_t start_total_time = time(NULL);
     srand((unsigned)time(&t));
-    dim *r = (dim*)malloc(sizeof(dim) * N);
+    dim *r = (dim*)malloc(sizeof(dim) * size);
     set_initial_state(r);
     mc_method(r);
     free(r);
@@ -47,7 +47,7 @@ void set_initial_state(dim *array) {
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
         for (double j = -(box_size - initial_dist_to_edge)/2; j < (box_size - initial_dist_to_edge)/2; j += initial_dist_by_one_axis) {
             for (double l = -(box_size - initial_dist_to_edge)/2; l < (box_size - initial_dist_to_edge)/2; l += initial_dist_by_one_axis) {
-                if( count == N){
+                if( count == size){
                     return; //it is not balanced grid but we can use it
                 }
                 array[count] = { i,j,l };
@@ -55,8 +55,8 @@ void set_initial_state(dim *array) {
             }
         }
     }
-    if( count < N ){
-    	printf("error decrease initial_dist parameter, count is %ld  N is %ld \n", count, N);
+    if( count < size ){
+    	printf("error decrease initial_dist parameter, count is %ld  size is %ld \n", count, size);
     	exit(1);
     }
 }
@@ -89,9 +89,9 @@ double square_dist(dim first, dim second) {
 double calculate_energy_lj(dim *array){
     double energy = 0;
     #pragma omp parallel for reduction(+:energy) num_threads(NUM_THREADS)
-    for (int i = 0; i < N; i++) {
-        dim *neighbors = (dim*)malloc(sizeof(dim) * N);
-        int count_near = nearest_image(array, neighbors, N, i);
+    for (int i = 0; i < size; i++) {
+        dim *neighbors = (dim*)malloc(sizeof(dim) * size);
+        int count_near = nearest_image(array, neighbors, size, i);
         for (int j = 0; j < count_near; j++) {
             double dist = square_dist(array[i], neighbors[j]);
             double r6 = fast_pow(dist, 3);
@@ -112,12 +112,12 @@ void mc_method(dim *array) {
     double u1 = calculate_energy_lj(array);
     while (1) {
         if ((good_iter == nmax) || (i == total_it)) {
-            printf("\nenergy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/N, (float)good_iter/(float)total_it);
+            printf("\nenergy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/size, (float)good_iter/(float)total_it);
             break;
         }
-        dim *tmp = (dim*)malloc(sizeof(dim)*N);
-        memcpy(tmp, array, sizeof(dim)*N);
-        for (int particle = 0; particle < N; particle++) {
+        dim *tmp = (dim*)malloc(sizeof(dim)*size);
+        memcpy(tmp, array, sizeof(dim)*size);
+        for (int particle = 0; particle < size; particle++) {
             //ofsset between -max_deviation/2 and max_deviation/2
             double ex = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
             double ey = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
@@ -132,7 +132,7 @@ void mc_method(dim *array) {
         double rand_0_1 = (double)rand() / (double)RAND_MAX;
         if ((u2 < u1) || (probability <= rand_0_1)) {
             u1 = u2;
-            memcpy(array, tmp, sizeof(dim)*N);
+            memcpy(array, tmp, sizeof(dim)*size);
             energy_ar[good_iter] = u2;
             good_iter++;
             good_iter_hung++;

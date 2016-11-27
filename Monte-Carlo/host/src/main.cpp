@@ -2,14 +2,19 @@
 #include <stdlib.h>
 #include <math.h>
 #include "CL/opencl.h"
-#include <time.h>
+#include <sys\timeb.h>
 #include "parameters.h"
 #ifdef ALTERA
     #include "AOCL_Utils.h"
     using namespace aocl_utils;
 #endif
 #ifdef NVIDIA
-    #include "nvidia.h"
+    #define VENDOR "NVIDIA Corporation"
+    #include "gpu.h"
+#endif
+#ifdef IOCL
+    #define VENDOR "Intel(R) Corporation"
+    #include "gpu.h"
 #endif
 
 cl_platform_id platform = NULL;
@@ -22,9 +27,9 @@ cl_mem nearest_buf;
 cl_mem output_buf;
 
 // Problem data(positions and energy)
-cl_float3 input_a[N] = {};
-cl_float3 nearest[N] = {};
-float output[N] = {};
+cl_float3 input_a[size] = {};
+cl_float3 nearest[size] = {};
+float output[size] = {};
 float max_deviation = 0.005;
 double kernel_total_time = 0.;
 
@@ -39,7 +44,8 @@ float calculate_energy_lj();
 
 // Entry point.
 int main() {
-    time_t start_total_time = time(NULL);
+    struct timeb start_total_time;
+    ftime(&start_total_time);
     // Initialize OpenCL.
     if(!init_opencl()) {
       return -1;
@@ -49,8 +55,9 @@ int main() {
     mc();
     // Free the resources allocated
     cleanup();
-    time_t end_total_time = time(NULL);
-    printf("\nTotal execution time in seconds =  %f\n", difftime(end_total_time, start_total_time));
+    struct timeb end_total_time;
+    ftime(&end_total_time);
+    printf("\nTotal execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
     printf("\nKernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
     return 0;
 }
@@ -67,15 +74,14 @@ bool init_opencl() {
           return false;
         }
         platform = findPlatform("Altera");
-    #endif
-    #ifdef NVIDIA
+    #else
         cl_uint num_platforms;
         cl_platform_id pls[MAX_PLATFORMS_COUNT];
         clGetPlatformIDs(MAX_PLATFORMS_COUNT, pls, &num_platforms);
         char vendor[128];
         for (int i = 0; i < MAX_PLATFORMS_COUNT; i++){
             clGetPlatformInfo (pls[i], CL_PLATFORM_VENDOR, sizeof(vendor), vendor, NULL);
-            if (!strcmp("NVIDIA Corporation", vendor))
+            if (!strcmp(VENDOR, vendor))
             {
                 platform = pls[i];
                 break;
@@ -93,8 +99,7 @@ bool init_opencl() {
         devices.reset(getDevices(platform, CL_DEVICE_TYPE_ALL, &num_devices));
         // We'll just use the first device.
         device = devices[0];
-    #endif
-    #ifdef NVIDIA
+    #else
         cl_uint num_devices;
         clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU , 1, &device, &num_devices);
     #endif
@@ -109,8 +114,7 @@ bool init_opencl() {
         std::string binary_file = getBoardBinaryFile("mc", device);
         printf("Using AOCX: %s\n", binary_file.c_str());
         program = createProgramFromBinary(context, binary_file.c_str(), &device, 1);
-    #endif
-    #ifdef NVIDIA
+    #else
         int MAX_SOURCE_SIZE  = 65536;
         FILE *fp;
         const char fileName[] = "./device/mc.cl";
@@ -142,12 +146,12 @@ bool init_opencl() {
 
     // Input buffer.
     nearest_buf = clCreateBuffer(context, CL_MEM_READ_ONLY,
-        N * sizeof(cl_float3), NULL, &status);
+        size * sizeof(cl_float3), NULL, &status);
     checkError(status, "Failed to create buffer for input A");
 
     // Output buffer.
     output_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
-        N * sizeof(float), NULL, &status);
+        size * sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for output");
 
     return true;
@@ -158,7 +162,7 @@ void init_problem() {
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
         for (double j = -(box_size - initial_dist_to_edge)/2; j < (box_size - initial_dist_to_edge)/2; j += initial_dist_by_one_axis) {
             for (double l = -(box_size - initial_dist_to_edge)/2; l < (box_size - initial_dist_to_edge)/2; l += initial_dist_by_one_axis) {
-                if( count == N){
+                if( count == size){
                     return; //it is not balanced grid but we can use it
                 }
                 input_a[count] = (cl_float3){ i, j, l };
@@ -166,8 +170,8 @@ void init_problem() {
             }
         }
     }
-    if( count < N ){
-        printf("error decrease initial_dist parameter, count is %ld  N is %ld \n", count, N);
+    if( count < size ){
+        printf("error decrease initial_dist parameter, count is %ld  size is %ld \n", count, size);
         exit(1);
     }
 }
@@ -177,7 +181,7 @@ float calculate_energy_lj() {
     memset(output, 0, sizeof(output));
     run();
     float total_energy = 0;
-    for (unsigned i = 0; i < N; i++)
+    for (unsigned i = 0; i < size; i++)
         total_energy+=output[i];
     total_energy/=2;
     return total_energy;
@@ -189,15 +193,16 @@ void mc() {
     int good_iter_hung = 0;
     float energy_ar[nmax] = {};
     float u1 = calculate_energy_lj();
-    printf("energy is %f\n", u1/N);
+    printf("energy is %f\n", u1/size);
     while (1) {
         if ((good_iter == nmax) || (i == total_it)) {
-            printf("\nenergy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/N, (float)good_iter/(float)total_it);
+            printf("\nenergy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/size, (float)good_iter/(float)total_it);
+            printf("\nKernel execution time in milliseconds per iters = %0.3f ms\n", (kernel_total_time / (1000000.0 * i)) );
             break;
         }
-        cl_float3 tmp[N];
-        memcpy(tmp, input_a, sizeof(cl_float3)*N);
-        for (int particle = 0; particle < N; particle++) {
+        cl_float3 tmp[size];
+        memcpy(tmp, input_a, sizeof(cl_float3)*size);
+        for (int particle = 0; particle < size; particle++) {
             //ofsset between -max_deviation/2 and max_deviation/2
             double ex = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
             double ey = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
@@ -217,7 +222,7 @@ void mc() {
             good_iter_hung++;
         }
         else {
-            memcpy(input_a, tmp, sizeof(cl_float3) * N);
+            memcpy(input_a, tmp, sizeof(cl_float3) * size);
         }
         i++;
     }
@@ -231,13 +236,13 @@ void run() {
 
     cl_event write_event;
     status = clEnqueueWriteBuffer(queue, nearest_buf, CL_FALSE,
-        0, N * sizeof(cl_float3), nearest, 0, NULL, &write_event);
+        0, size * sizeof(cl_float3), nearest, 0, NULL, &write_event);
     checkError(status, "Failed to transfer input A");
 
     unsigned argi = 0;
 
-    size_t global_work_size[1] = {N};
-    size_t local_work_size[1] = {N};
+    size_t global_work_size[1] = {size};
+    size_t local_work_size[1] = {size};
     status = clSetKernelArg(kernel, argi++, sizeof(cl_mem), &nearest_buf);
     checkError(status, "Failed to set argument nearest");
 
@@ -249,7 +254,7 @@ void run() {
     checkError(status, "Failed to launch kernel");
 
     status = clEnqueueReadBuffer(queue, output_buf, CL_FALSE,
-        0, N * sizeof(float), output, 1, &kernel_event, &finish_event);
+        0, size * sizeof(float), output, 1, &kernel_event, &finish_event);
 
     // Release local events.
     clReleaseEvent(write_event);
@@ -268,7 +273,7 @@ void run() {
 }
 
 void nearest_image(){
-    for (int i = 0; i < N; i++){
+    for (int i = 0; i < size; i++){
         float x,y,z;
         if (input_a[i].x  > 0){
             x = fmod(input_a[i].x + half_box, box_size) - half_box;
