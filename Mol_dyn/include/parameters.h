@@ -1,6 +1,6 @@
 #define rc 3
-#define box_size 14
-#define half_box 7
+#define box_size 16
+#define half_box 8
 #define size 512
 #define total_it 5000
 #define dt 0.0005

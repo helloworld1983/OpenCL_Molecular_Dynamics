@@ -61,6 +61,7 @@ int main() {
     time_t end_total_time = time(NULL);
     printf("\nTotal execution time in seconds =  %f\n", difftime(end_total_time, start_total_time));
     printf("\nKernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
+    printf("\nKernel execution time in milliseconds per iters = %0.3f ms\n", (kernel_total_time / ( total_it * 1000000.0)) );
     return 0;
 }
 

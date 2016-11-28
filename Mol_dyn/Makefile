@@ -28,8 +28,8 @@ AOCL_COMPILE_CONFIG=$(shell aocl compile-config --arm) -I../common/inc
 AOCL_LINK_CONFIG=$(shell aocl link-config --arm)
 
 #GPU COMPILATION
-GPU_INCLUDE = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include"
-GPU_LIB = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\Win32"
+GPU_INCLUDE = "$(CUDA_PATH)\include"
+GPU_LIB = "$(CUDA_PATH)\lib\Win32"
 
 #INTEL GPU COMPILATION
 IOCL_INCLUDE = "$(INTELOCLSDKROOT)\include"
