@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "CL/opencl.h"
-#include <sys\timeb.h>
+#include <sys/timeb.h>
 #include "parameters.h"
 #ifdef ALTERA
     #include "AOCL_Utils.h"

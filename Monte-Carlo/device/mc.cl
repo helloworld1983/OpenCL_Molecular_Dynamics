@@ -13,19 +13,19 @@ __kernel void mc(__global const float3 *restrict particles,
         float z = particles[i].z - particles[index].z;
         if (x > half_box)
             x -= box_size;
-        else{
+        else {
             if (x < -half_box)
                 x += box_size;
         }
         if (y > half_box)
             y -= box_size;
-        else{
+        else {
             if (y < -half_box)
                 y += box_size;
         }
         if (z > half_box)
             z -= box_size;
-        else{
+        else {
             if (z < -half_box)
                 z += box_size;
         }

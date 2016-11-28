@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <float.h>
+#include <sys/timeb.h>
 #include <time.h>
 #include <omp.h>
 #include <string.h>
@@ -16,27 +17,28 @@ struct dim {
 };
 typedef struct dim dim;
 
-double square_dist(dim first, dim second);
 int nearest_image(dim* initial_array, dim* new_array, int particle_count, int particle);
 void set_initial_state(dim *array);
-double fast_pow(double a, int n);
 void mc_method(dim *array);
 double calculate_energy_lj(dim *array);
+double fast_pow(double a, int n);
 
 double Urc = 4 * ( 1 / fast_pow(rc, 12) - 1 / fast_pow(rc, 6) );
 double max_deviation = 0.005;
 
 int main()
 {
+    struct timeb start_total_time;
+    ftime(&start_total_time);
     time_t t;
-    time_t start_total_time = time(NULL);
     srand((unsigned)time(&t));
     dim *r = (dim*)malloc(sizeof(dim) * size);
     set_initial_state(r);
     mc_method(r);
     free(r);
-    time_t end_total_time = time(NULL);
-    printf("\nTotal execution time in seconds =  %f\n", difftime(end_total_time, start_total_time));
+    struct timeb end_total_time;
+    ftime(&end_total_time);
+    printf("\nTotal execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
     return 0;
 }
 
@@ -61,44 +63,66 @@ void set_initial_state(dim *array) {
     }
 }
 
-int nearest_image(dim* initial_array, dim* new_array, int particle_count, int particle) {
-    int count = 0;
-    for (int z_dif = -box_size; z_dif < box_size + 1; z_dif += box_size) {
-        for (int y_dif = -box_size; y_dif < box_size + 1; y_dif += box_size) {
-            for (int x_dif = -box_size; x_dif < box_size + 1; x_dif += box_size) {
-                for (int i = 0; i < particle_count; i++) {
-                    if (particle == i) {
-                        continue;
-                    }
-                    dim temp = { initial_array[i].x + x_dif, initial_array[i].y + y_dif, initial_array[i].z + z_dif };
-                    if (square_dist(temp, initial_array[particle]) < rc*rc) {
-                        new_array[count] = temp;
-                        count++;
-                    }
-                }
-            }
+void nearest_image(dim *array, dim *nearest){
+    for (int i = 0; i < size; i++){
+        float x,y,z;
+        if (array[i].x  > 0){
+            x = fmod(array[i].x + half_box, box_size) - half_box;
         }
+        else{
+            x = fmod(array[i].x - half_box, box_size) + half_box;
+        }
+        if (array[i].y  > 0){
+            y = fmod(array[i].y + half_box, box_size) - half_box;
+        }
+        else{
+            y = fmod(array[i].y - half_box, box_size) + half_box;
+        }
+        if (array[i].z  > 0){
+            z = fmod(array[i].z + half_box, box_size) - half_box;
+        }
+        else{
+            z = fmod(array[i].z - half_box, box_size) + half_box;
+        }
+        nearest[i] = (dim){ x, y, z};
     }
-    return count;
-}
-
-double square_dist(dim first, dim second) {
-    return (first.x - second.x)*(first.x - second.x) + (first.y - second.y)*(first.y - second.y) + (first.z - second.z)*(first.z - second.z);
 }
 
 double calculate_energy_lj(dim *array){
+    dim *nearest = (dim*)malloc(sizeof(dim) * size);
+    nearest_image(array, nearest);
     double energy = 0;
     #pragma omp parallel for reduction(+:energy) num_threads(NUM_THREADS)
     for (int i = 0; i < size; i++) {
-        dim *neighbors = (dim*)malloc(sizeof(dim) * size);
-        int count_near = nearest_image(array, neighbors, size, i);
-        for (int j = 0; j < count_near; j++) {
-            double dist = square_dist(array[i], neighbors[j]);
-            double r6 = fast_pow(dist, 3);
-            double r12 = r6 * r6;
-            energy += 4 * (1 / r12 - 1 / r6) - Urc;
+        for (int j = 0; j < i; j++) {
+            float x = nearest[j].x - nearest[i].x;
+            float y = nearest[j].y - nearest[i].y;
+            float z = nearest[j].z - nearest[i].z;
+            if (x > half_box)
+                x -= box_size;
+            else {
+                if (x < -half_box)
+                    x += box_size;
+            }
+            if (y > half_box)
+                y -= box_size;
+            else {
+                if (y < -half_box)
+                    y += box_size;
+            }
+            if (z > half_box)
+                z -= box_size;
+            else {
+                if (z < -half_box)
+                    z += box_size;
+            }
+            float sq_dist = x * x + y * y + z * z;
+            if (sq_dist < rc * rc) {
+                double r6 = sq_dist * sq_dist * sq_dist;
+                double r12 = r6 * r6;
+                energy += 4 * (1 / r12 - 1 / r6) - Urc;
+            }
         }
-        free(neighbors);
     }
     // now we consider each interaction twice, so we need to divide energy by 2
     return energy / 2;
