@@ -1,1 +1,1 @@
-Implementation of molecular dynamics and Monte-Carlo algorithms on fpga, using Altera OpenCL compiler, nvidia gpu and cpu
+Implementation of MD and MC algorithms on FPGA, using Altera OpenCL compiler, GPU and CPU. Results comparassion
