@@ -117,7 +117,7 @@ double calculate_energy_lj(dim *array){
                     z += box_size;
             }
             float sq_dist = x * x + y * y + z * z;
-            if (sq_dist < rc * rc) {
+            if ((sq_dist < rc * rc) && (j != i)) {
                 double r6 = sq_dist * sq_dist * sq_dist;
                 double r12 = r6 * r6;
                 energy += 4 * (1 / r12 - 1 / r6) - Urc;
