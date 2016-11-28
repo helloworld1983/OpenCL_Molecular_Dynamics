@@ -17,7 +17,7 @@ struct dim {
 };
 typedef struct dim dim;
 
-int nearest_image(dim* initial_array, dim* new_array, int particle_count, int particle);
+void nearest_image(dim *initial_array, dim *nearest);
 void set_initial_state(dim *array);
 void mc_method(dim *array);
 double calculate_energy_lj(dim *array);
