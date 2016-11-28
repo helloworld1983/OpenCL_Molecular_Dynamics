@@ -5,7 +5,7 @@
 TARGET = MDHost
 TARGET_GPU = MDHost_GPU
 TARGET_CPU = MDHost_CPU
-
+TARGET_IOCL = MDHost_IOCL
 
 # Where is the Altera SDK for OpenCL software?
 ifeq ($(wildcard $(ALTERAOCLSDKROOT)),)
@@ -27,10 +27,13 @@ CROSS-COMPILE = arm-linux-gnueabihf-
 AOCL_COMPILE_CONFIG=$(shell aocl compile-config --arm) -I../common/inc
 AOCL_LINK_CONFIG=$(shell aocl link-config --arm)
 
-
 #GPU COMPILATION
 GPU_INCLUDE = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include"
 GPU_LIB = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\Win32"
+
+#INTEL GPU COMPILATION
+IOCL_INCLUDE = "$(INTELOCLSDKROOT)\include"
+IOCL_LIB =  "$(INTELOCLSDKROOT)\lib\x86"
 
 #OPENMP COMPILATION
 SRCS_CPU = md_cpu.cpp
@@ -44,7 +47,10 @@ gpu :
 
 cpu :
 	g++ $(SRCS_CPU_FILES) -I $(HEADERS) -w -O3 -o $(TARGET_CPU) -fopenmp
-# Standard make targets
+
+intel :
+	g++ $(SRCS_FILES) -I $(IOCL_INCLUDE) -I $(HEADERS) -D IOCL -L $(IOCL_LIB) -o $(TARGET_IOCL) -lOpenCL -w
+
 clean :
 	@rm -f *.o $(TARGET)
 	@rm -f *.o $(TARGET_CPU)
