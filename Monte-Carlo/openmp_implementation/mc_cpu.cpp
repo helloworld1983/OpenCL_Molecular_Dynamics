@@ -124,6 +124,7 @@ double calculate_energy_lj(dim *array){
             }
         }
     }
+    free(nearest);
     // now we consider each interaction twice, so we need to divide energy by 2
     return energy / 2;
 }
