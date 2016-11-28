@@ -94,7 +94,7 @@ double calculate_energy_lj(dim *array){
     double energy = 0;
     #pragma omp parallel for reduction(+:energy) num_threads(NUM_THREADS)
     for (int i = 0; i < size; i++) {
-        for (int j = 0; j < i; j++) {
+        for (int j = 0; j < size; j++) {
             float x = nearest[j].x - nearest[i].x;
             float y = nearest[j].y - nearest[i].y;
             float z = nearest[j].z - nearest[i].z;
