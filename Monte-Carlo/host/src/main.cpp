@@ -237,7 +237,7 @@ void run() {
     cl_event write_event;
     status = clEnqueueWriteBuffer(queue, nearest_buf, CL_FALSE,
         0, size * sizeof(cl_float3), nearest, 0, NULL, &write_event);
-    checkError(status, "Failed to transfer input A");
+    checkError(status, "Failed to transfer nearest");
 
     unsigned argi = 0;
 
