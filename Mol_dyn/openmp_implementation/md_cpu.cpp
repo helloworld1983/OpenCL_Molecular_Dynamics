@@ -23,8 +23,6 @@ void md(dim *array, dim *velocity, dim *force);
 double calculate_energy_force_lj(dim *array, dim *force);
 void motion(dim *array, dim *velocity, dim *force);
 
-double Urc = 4 * ( 1 / fast_pow(rc, 12) - 1 / fast_pow(rc, 6) );
-
 int main()
 {
     struct timeb start_total_time;
@@ -136,7 +134,7 @@ double calculate_energy_force_lj(dim *array, dim *force){
                 force_x += x * multiplier;
                 force_y += y * multiplier;
                 force_z += z * multiplier;
-                energy += 4 * (1 / r12 - 1 / r6) - Urc;
+                energy += 4 * (1 / r12 - 1 / r6);
             }
         }
         force[i].x = force_x;

@@ -23,7 +23,6 @@ void mc_method(dim *array);
 double calculate_energy_lj(dim *array);
 double fast_pow(double a, int n);
 
-double Urc = 4 * ( 1 / fast_pow(rc, 12) - 1 / fast_pow(rc, 6) );
 double max_deviation = 0.005;
 
 int main()
@@ -120,7 +119,7 @@ double calculate_energy_lj(dim *array){
             if ((sq_dist < rc * rc) && (j != i)) {
                 double r6 = sq_dist * sq_dist * sq_dist;
                 double r12 = r6 * r6;
-                energy += 4 * (1 / r12 - 1 / r6) - Urc;
+                energy += 4 * (1 / r12 - 1 / r6);
             }
         }
     }
