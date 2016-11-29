@@ -1,6 +1,6 @@
 #include "../include/parameters.h"
 
-__attribute__((reqd_work_group_size(size, 1, 1)))
+//__attribute__((reqd_work_group_size(size, 1, 1)))
 __kernel void md(__global const float3 *restrict particles,
                  __global float *restrict out_energy,
                  __global float3 *restrict out_force) {
@@ -33,14 +33,13 @@ __kernel void md(__global const float3 *restrict particles,
             if (z < -half_box)
                 z += box_size;
         }
-        float3 r = (float3)(x, y, z);
         float sq_dist = x * x + y * y + z * z;
         if ((sq_dist < (rc * rc)) && (i != index)) {
             float r6 = sq_dist * sq_dist * sq_dist;
             float r12 = r6 * r6;
             float r8 = r6 * sq_dist;
             float r14 = r12 * sq_dist;
-            float multiplier = (12 * (1 / r14 - 1 / r8));
+            float multiplier = 12 * (1 / r14 - 1 / r8);
             force_x += x * multiplier;
             force_y += y * multiplier;
             force_z += z * multiplier;
