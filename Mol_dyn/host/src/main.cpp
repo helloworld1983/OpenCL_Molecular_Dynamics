@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "CL/opencl.h"
-#include <time.h>
+#include <sys/timeb.h>
 #include "parameters.h"
 #ifdef ALTERA
     #include "AOCL_Utils.h"
@@ -48,7 +48,8 @@ void calculate_energy_force_lj();
 
 // Entry point.
 int main() {
-    time_t start_total_time = time(NULL);
+    struct timeb start_total_time;
+    ftime(&start_total_time);
     // Initialize OpenCL.
     if(!init_opencl()) {
       return -1;
@@ -58,8 +59,9 @@ int main() {
     md();
     // Free the resources allocated
     cleanup();
-    time_t end_total_time = time(NULL);
-    printf("\nTotal execution time in seconds =  %f\n", difftime(end_total_time, start_total_time));
+    struct timeb end_total_time;
+    ftime(&end_total_time);
+    printf("\nTotal execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
     printf("\nKernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
     printf("\nKernel execution time in milliseconds per iters = %0.3f ms\n", (kernel_total_time / ( total_it * 1000000.0)) );
     return 0;
@@ -199,12 +201,12 @@ void md() {
     for (int n = 0; n < total_it; n ++){
         calculate_energy_force_lj();
         motion();
-        if (!(n % 500)){
-            float total_energy = 0;
-            for (int i = 0; i < size; i++)
-                total_energy+=output_energy[i];
-            total_energy/=(2 * size);
-                printf("energy is %f \n",total_energy);
+        float total_energy = 0;
+        for (int i = 0; i < size; i++)
+            total_energy+=output_energy[i];
+        total_energy/=(2 * size);
+        if (!(n % 1000)){
+            printf("energy is %f \n",total_energy);
         }
     }
 }
