@@ -1,7 +1,7 @@
 #define rc 3
-#define box_size 12
-#define half_box 6
-#define size 256
+#define box_size 8
+#define half_box 4
+#define particles_count 64
 #define nmax 30000
 #define total_it 60000
 #define Temperature 1.3
