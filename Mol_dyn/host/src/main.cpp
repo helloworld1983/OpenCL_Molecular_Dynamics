@@ -1,23 +1,23 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include "CL/opencl.h"
-#include <sys/timeb.h>
-#include "parameters.h"
+#include "headers.h"
 #ifdef ALTERA
     #include "AOCL_Utils.h"
     using namespace aocl_utils;
+#else
+    #include "CL/cl.h"
+    void checkError(cl_int err, const char *operation){
+        if (err != CL_SUCCESS){
+            fprintf(stderr, "Error during operation '%s': %d\n", operation, err);
+            exit(1);
+        }
+    }
 #endif
 #ifdef NVIDIA
     #define VENDOR "NVIDIA Corporation"
-    #include "gpu.h"
 #endif
 #ifdef IOCL
     #define VENDOR "Intel(R) Corporation"
-    #include "gpu.h"
 #endif
 
-// OpenCL runtime configuration
 cl_platform_id platform = NULL;
 cl_device_id device;
 cl_context context = NULL;
@@ -28,36 +28,22 @@ cl_mem nearest_buf;
 cl_mem output_energy_buf;
 cl_mem output_force_buf;
 
-// Problem data.
-cl_float3 input_a[size] = {};
-cl_float3 nearest[size] = {};
-cl_float3 velocity[size] = {};
+cl_float3 position_arr[particles_count] = {};
+cl_float3 nearest[particles_count] = {};
+cl_float3 velocity[particles_count] = {};
 
-float output_energy[size] = {};
-cl_float3 output_force[size] = {};
+float output_energy[particles_count] = {};
+cl_float3 output_force[particles_count] = {};
 double kernel_total_time = 0.;
 
-bool init_opencl();
-void init_problem();
-void run();
-void cleanup();
-void md();
-void motion();
-void nearest_image();
-void calculate_energy_force_lj();
-
-// Entry point.
 int main() {
     struct timeb start_total_time;
     ftime(&start_total_time);
-    // Initialize OpenCL.
     if(!init_opencl()) {
       return -1;
     }
-    // Initialize the problem data.
-    init_problem();
-    md();
-    // Free the resources allocated
+    init_problem(position_arr, velocity);
+    md(position_arr, nearest, output_force, output_energy, velocity);
     cleanup();
     struct timeb end_total_time;
     ftime(&end_total_time);
@@ -109,7 +95,6 @@ bool init_opencl() {
         clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU , 1, &device, &num_devices);
     #endif
 
-    // Create the context.
     context = clCreateContext(NULL, 1, &device, NULL, NULL, &status);
     checkError(status, "Failed to create context");
 
@@ -142,7 +127,6 @@ bool init_opencl() {
         program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &status);
     #endif
 
-    // Build the program that was just created.
     status = clBuildProgram(program, 0, NULL, "", NULL, NULL);
     checkError(status, "Failed to build program");
 
@@ -152,91 +136,43 @@ bool init_opencl() {
 
     // Input buffer.
     nearest_buf = clCreateBuffer(context, CL_MEM_READ_ONLY,
-        size * sizeof(cl_float3), NULL, &status);
+        particles_count * sizeof(cl_float3), NULL, &status);
     checkError(status, "Failed to create buffer for nearest");
 
-    // Output buffer.
+    // Output buffers.
     output_energy_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
-        size * sizeof(float), NULL, &status);
+        particles_count * sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for output_en");
 
      output_force_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
-        size * sizeof(cl_float3), NULL, &status);
+        particles_count * sizeof(cl_float3), NULL, &status);
     checkError(status, "Failed to create buffer for output_force");
 
     return true;
 }
 
-// Initialize the data for the problem. Requires num_devices to be known.
-void init_problem() {
-    int count = 0;
-    for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
-        for (double j = -(box_size - initial_dist_to_edge)/2; j < (box_size - initial_dist_to_edge)/2; j += initial_dist_by_one_axis) {
-            for (double l = -(box_size - initial_dist_to_edge)/2; l < (box_size - initial_dist_to_edge)/2; l += initial_dist_by_one_axis) {
-                if( count == size){
-                    return; //it is not balanced grid but we can use it
-                }
-                input_a[count] = (cl_float3){ i, j, l };
-                velocity[count] = (cl_float3){ 0, 0, 0 };
-                count++;
-            }
-        }
-    }
-    if( count < size ){
-        printf("error decrease initial_dist parameter, count is %ld  size is %ld \n", count, size);
-        exit(1);
-    }
-}
-
-void calculate_energy_force_lj() {
-    nearest_image();
-    for (int i = 0; i < size; i++){
-        output_force[i] = (cl_float3){0, 0, 0};
-        output_energy[i] = 0;
-    }
-    run();
-}
-
-void md() {
-    for (int n = 0; n < total_it; n ++){
-        calculate_energy_force_lj();
-        motion();
-        float total_energy = 0;
-        for (int i = 0; i < size; i++)
-            total_energy+=output_energy[i];
-        total_energy/=(2 * size);
-        if (!(n % 1000)){
-            printf("energy is %f \n",total_energy);
-        }
-    }
-}
-
 void run() {
     cl_int status;
 
-    // Launch the problem for each device.
     cl_event kernel_event;
     cl_event finish_event;
     cl_ulong time_start, time_end;
     double total_time;
-    // Each of the host buffers supplied to
-    // clEnqueueWriteBuffer here is already aligned to ensure that DMA is used
-    // for the host-to-device transfer.
+
     cl_event write_event;
     status = clEnqueueWriteBuffer(queue, nearest_buf, CL_FALSE,
-        0, size * sizeof(cl_float3), nearest, 0, NULL, &write_event);
+        0, particles_count * sizeof(cl_float3), nearest, 0, NULL, &write_event);
     checkError(status, "Failed to transfer nearest");
 
-    // Set kernel arguments.
     unsigned argi = 0;
 
-    size_t global_work_size[1] = {size};
-    size_t local_work_size[1] = {size};
+    size_t global_work_size[1] = {particles_count};
+    size_t local_work_size[1] = {particles_count};
     status = clSetKernelArg(kernel, argi++, sizeof(cl_mem), &nearest_buf);
-    checkError(status, "Failed to set argument input_a");
+    checkError(status, "Failed to set argument nearest");
 
     status = clSetKernelArg(kernel, argi++, sizeof(cl_mem), &output_energy_buf);
-    checkError(status, "Failed to set argument output_en");
+    checkError(status, "Failed to set argument output_energy");
 
     status = clSetKernelArg(kernel, argi++, sizeof(cl_mem), &output_force_buf);
     checkError(status, "Failed to set argument output_force");
@@ -245,12 +181,11 @@ void run() {
         global_work_size, local_work_size, 1, &write_event, &kernel_event);
     checkError(status, "Failed to launch kernel");
 
-    // Read the result. This the final operation.
     status = clEnqueueReadBuffer(queue, output_energy_buf, CL_FALSE,
-        0, size * sizeof(float), output_energy, 1, &kernel_event, &finish_event);
+        0, particles_count * sizeof(float), output_energy, 1, &kernel_event, &finish_event);
 
     status = clEnqueueReadBuffer(queue, output_force_buf, CL_FALSE,
-        0, size * sizeof(cl_float3), output_force, 1, &kernel_event, &finish_event);
+        0, particles_count * sizeof(cl_float3), output_force, 1, &kernel_event, &finish_event);
 
     // Release local events.
     clReleaseEvent(write_event);
@@ -266,47 +201,6 @@ void run() {
     // Release all events.
     clReleaseEvent(kernel_event);
     clReleaseEvent(finish_event);
-}
-
-void motion(){
-    double total_energy = 0;
-    for (int i = 0; i < size; i++)
-            total_energy+=output_energy[i];
-        total_energy/=(2 * size);
-    for (int i = 0; i < size; i++) {
-        velocity[i] = (cl_float3) {velocity[i].x + output_force[i].x * dt,
-            velocity[i].y + output_force[i].y * dt,
-            velocity[i].z + output_force[i].z * dt};
-        input_a[i] = (cl_float3) {input_a[i].x + velocity[i].x * dt,
-            input_a[i].y + velocity[i].y * dt,
-            input_a[i].z + velocity[i].z * dt};
-    }
-
-}
-
-void nearest_image(){
-    for (int i = 0; i < size; i++){
-        float x,y,z;
-        if (input_a[i].x  > 0){
-            x = fmod(input_a[i].x + half_box, box_size) - half_box;
-        }
-        else{
-            x = fmod(input_a[i].x - half_box, box_size) + half_box;
-        }
-        if (input_a[i].y  > 0){
-            y = fmod(input_a[i].y + half_box, box_size) - half_box;
-        }
-        else{
-            y = fmod(input_a[i].y - half_box, box_size) + half_box;
-        }
-        if (input_a[i].z  > 0){
-            z = fmod(input_a[i].z + half_box, box_size) - half_box;
-        }
-        else{
-            z = fmod(input_a[i].z - half_box, box_size) + half_box;
-        }
-        nearest[i] = (cl_float3){ x, y, z};
-    }
 }
 
 // Free the resources allocated during initialization

@@ -16,25 +16,27 @@ struct dim {
 };
 typedef struct dim dim;
 
-void nearest_image(dim *initial_array, dim *nearest);
-void set_initial_state(dim *array, dim *velocity, dim *force);
+void nearest_image(dim *position_arr, dim *nearest);
+void init_problem(dim *position_arr, dim *velocity, dim *output_force);
 double fast_pow(double a, int n);
-void md(dim *array, dim *velocity, dim *force);
-double calculate_energy_force_lj(dim *array, dim *force);
-void motion(dim *array, dim *velocity, dim *force);
+void md(dim *position_arr, dim *velocity, dim *output_force, dim *nearest);
+double calculate_energy_force_lj(dim *position_arr, dim *nearest, dim *output_force);
+void motion(dim *position_arr, dim *velocity, dim *output_force);
 
 int main()
 {
     struct timeb start_total_time;
     ftime(&start_total_time);
-    dim *r = (dim*)malloc(sizeof(dim) * size);
-    dim *v = (dim*)malloc(sizeof(dim) * size);
-    dim *f = (dim*)malloc(sizeof(dim) * size);
-    set_initial_state(r,v,f);
-    md(r,v,f);
-    free(r);
-    free(v);
-    free(f);
+    dim *position_arr = (dim*)malloc(sizeof(dim) * particles_count);
+    dim *nearest = (dim*)malloc(sizeof(dim) * particles_count);
+    dim *velocity = (dim*)malloc(sizeof(dim) * particles_count);
+    dim *output_force = (dim*)malloc(sizeof(dim) * particles_count);
+    init_problem(position_arr, velocity,output_force);
+    md(position_arr, velocity, output_force, nearest);
+    free(position_arr);
+    free(nearest);
+    free(velocity);
+    free(output_force);
     struct timeb end_total_time;
     ftime(&end_total_time);
     printf("\nTotal execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
@@ -43,66 +45,65 @@ int main()
 
 /////// HELPER FUNCTIONS ///////
 
-void set_initial_state(dim *array, dim *velocity, dim *force) {
+void init_problem(dim *position_arr, dim *velocity, dim *output_force) {
     int count = 0;
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
         for (double j = -(box_size - initial_dist_to_edge)/2; j < (box_size - initial_dist_to_edge)/2; j += initial_dist_by_one_axis) {
             for (double l = -(box_size - initial_dist_to_edge)/2; l < (box_size - initial_dist_to_edge)/2; l += initial_dist_by_one_axis) {
-                if( count == size){
-                    return; //it is not balanced grid but we can use it
+                if( count == particles_count){
+                    return;
                 }
-                array[count] = { i,j,l };
+                position_arr[count] = { i,j,l };
                 velocity[count] = { 0, 0, 0 };
-                force[count] = { 0, 0, 0 };
+                output_force[count] = { 0, 0, 0 };
                 count++;
             }
         }
     }
-    if( count < size ){
-        printf("error decrease initial_dist parameter, count is %ld  size is %ld \n", count, size);
+    if( count < particles_count ){
+        printf("error decrease initial_dist parameter, count is %ld  particles_count is %ld \n", count, particles_count);
         exit(1);
     }
 }
 
-void nearest_image(dim *array, dim *nearest){
-    for (int i = 0; i < size; i++){
+void nearest_image(dim *position_arr, dim *nearest){
+    for (int i = 0; i < particles_count; i++){
         float x,y,z;
-        if (array[i].x  > 0){
-            x = fmod(array[i].x + half_box, box_size) - half_box;
+        if (position_arr[i].x  > 0){
+            x = fmod(position_arr[i].x + half_box, box_size) - half_box;
         }
         else{
-            x = fmod(array[i].x - half_box, box_size) + half_box;
+            x = fmod(position_arr[i].x - half_box, box_size) + half_box;
         }
-        if (array[i].y  > 0){
-            y = fmod(array[i].y + half_box, box_size) - half_box;
-        }
-        else{
-            y = fmod(array[i].y - half_box, box_size) + half_box;
-        }
-        if (array[i].z  > 0){
-            z = fmod(array[i].z + half_box, box_size) - half_box;
+        if (position_arr[i].y  > 0){
+            y = fmod(position_arr[i].y + half_box, box_size) - half_box;
         }
         else{
-            z = fmod(array[i].z - half_box, box_size) + half_box;
+            y = fmod(position_arr[i].y - half_box, box_size) + half_box;
+        }
+        if (position_arr[i].z  > 0){
+            z = fmod(position_arr[i].z + half_box, box_size) - half_box;
+        }
+        else{
+            z = fmod(position_arr[i].z - half_box, box_size) + half_box;
         }
         nearest[i] = (dim){ x, y, z};
     }
 }
 
 
-double calculate_energy_force_lj(dim *array, dim *force){
-    for (int i = 0; i < size; i++){
-        force[i] = { 0, 0, 0};
+double calculate_energy_force_lj(dim *position_arr, dim *nearest, dim *output_force){
+    for (int i = 0; i < particles_count; i++){
+        output_force[i] = { 0, 0, 0};
     }
-    dim *nearest = (dim*)malloc(sizeof(dim) * size);
-    nearest_image(array, nearest);
+    nearest_image(position_arr, nearest);
     double energy = 0;
     #pragma omp parallel for reduction(+:energy) num_threads(NUM_THREADS)
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < particles_count; i++) {
         double force_x = 0;
         double force_y = 0;
         double force_z = 0;
-        for (int j = 0; j < size; j++) {
+        for (int j = 0; j < particles_count; j++) {
             float x = nearest[j].x - nearest[i].x;
             float y = nearest[j].y - nearest[i].y;
             float z = nearest[j].z - nearest[i].z;
@@ -137,33 +138,31 @@ double calculate_energy_force_lj(dim *array, dim *force){
                 energy += 4 * (1 / r12 - 1 / r6);
             }
         }
-        force[i].x = force_x;
-        force[i].y = force_y;
-        force[i].z = force_z;
+        output_force[i].x = force_x;
+        output_force[i].y = force_y;
+        output_force[i].z = force_z;
     }
-    free(nearest);
-    // now we consider each interaction twice, so we need to divide energy by 2
     return energy / 2;
 }
 
-void md(dim *array, dim *velocity, dim *force) {
+void md(dim *position_arr, dim *velocity, dim *output_force, dim *nearest) {
     for (int n = 0; n < total_it; n ++){
-        double total_energy = calculate_energy_force_lj(array, force);
-        motion(array, velocity, force);
+        double total_energy = calculate_energy_force_lj(position_arr, nearest, output_force);
+        motion(position_arr, velocity, output_force);
         if (!(n % 1000)) {
-            printf("energy is %f \n", total_energy/size);
+            printf("energy is %f \n", total_energy/particles_count);
         }
     }
 }
 
-void motion(dim *array, dim *velocity, dim * force){
-    for (int i = 0; i < size; i++) {
-        velocity[i] = {velocity[i].x + force[i].x * dt,
-            velocity[i].y + force[i].y * dt,
-            velocity[i].z + force[i].z * dt};
-        array[i] = {array[i].x + velocity[i].x * dt,
-            array[i].y + velocity[i].y * dt,
-            array[i].z + velocity[i].z * dt};
+void motion(dim *position_arr, dim *velocity, dim * output_force){
+    for (int i = 0; i < particles_count; i++) {
+        velocity[i] = {velocity[i].x + output_force[i].x * dt,
+            velocity[i].y + output_force[i].y * dt,
+            velocity[i].z + output_force[i].z * dt};
+        position_arr[i] = {position_arr[i].x + velocity[i].x * dt,
+            position_arr[i].y + velocity[i].y * dt,
+            position_arr[i].z + velocity[i].z * dt};
     }
 }
 
