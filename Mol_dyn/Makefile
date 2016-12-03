@@ -15,7 +15,7 @@ ifeq ($(wildcard $(ALTERAOCLSDKROOT)/host/include/CL/opencl.h),)
 $(error Set ALTERAOCLSDKROOT to the root directory of the Altera SDK for OpenCL software installation.)
 endif
 
-SRCS = main.cpp
+SRCS = main.cpp md.cpp
 SRCS_FILES = $(foreach F, $(SRCS), host/src/$(F))
 COMMON_FILES = ../common/src/AOCL_Utils.cpp
 
@@ -42,13 +42,13 @@ SRCS_CPU_FILES = $(foreach F, $(SRCS_CPU), openmp_implementation/$(F))
 all :
 	$(CROSS-COMPILE)g++ -I $(HEADERS) -D ALTERA $(SRCS_FILES) $(COMMON_FILES) -o $(TARGET)  $(AOCL_COMPILE_CONFIG) $(AOCL_LINK_CONFIG)
 
-gpu :
+nvidia_gpu :
 	g++ $(SRCS_FILES) -I $(HEADERS) -D NVIDIA -I $(GPU_INCLUDE) -L $(GPU_LIB) -o $(TARGET_GPU) -lOpenCL
 
 cpu :
 	g++ $(SRCS_CPU_FILES) -I $(HEADERS) -w -O3 -o $(TARGET_CPU) -fopenmp
 
-intel :
+intel_gpu :
 	g++ $(SRCS_FILES) -I $(IOCL_INCLUDE) -I $(HEADERS) -D IOCL -L $(IOCL_LIB) -o $(TARGET_IOCL) -lOpenCL -w
 
 clean :
