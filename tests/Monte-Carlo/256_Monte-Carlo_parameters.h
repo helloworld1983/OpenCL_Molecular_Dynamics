@@ -1,0 +1,9 @@
+#define rc 3
+#define box_size 14
+#define half_box 7
+#define particles_count 256
+#define nmax 8000
+#define total_it 16000
+#define Temperature 1.3
+#define initial_dist_by_one_axis 1.6
+#define initial_dist_to_edge 4

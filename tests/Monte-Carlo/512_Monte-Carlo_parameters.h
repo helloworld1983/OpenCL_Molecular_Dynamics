@@ -1,9 +1,9 @@
 #define rc 3
-#define box_size 32
-#define half_box 16
-#define particles_count 1024
+#define box_size 22
+#define half_box 11
+#define particles_count 511
 #define nmax 8000
 #define total_it 16000
 #define Temperature 1.3
-#define initial_dist_by_one_axis 2.1
+#define initial_dist_by_one_axis 2
 #define initial_dist_to_edge 2

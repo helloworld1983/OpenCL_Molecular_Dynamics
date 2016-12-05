@@ -47,8 +47,8 @@ int main() {
     cleanup();
     struct timeb end_total_time;
     ftime(&end_total_time);
-    printf("\nTotal execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
-    printf("\nKernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
+    printf("Total execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
+    printf("Kernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
     printf("\nKernel execution time in milliseconds per iters = %0.3f ms\n", (kernel_total_time / ( total_it * 1000000.0)) );
     return 0;
 }
@@ -108,18 +108,48 @@ bool init_opencl() {
     #else
         int MAX_SOURCE_SIZE  = 65536;
         FILE *fp;
+        FILE *fp2;
         const char fileName[] = "./device/md.cl";
+        const char header[] = "./include/parameters.h";
         size_t source_size;
         char *source_str;
+        int count = 0;
         try {
             fp = fopen(fileName, "r");
             if (!fp) {
                 fprintf(stderr, "Failed to load kernel.\n");
                 exit(1);
             }
+            fp2 = fopen(header, "r");
+            if (!fp2) {
+                fprintf(stderr, "Failed to load kernel header.\n");
+                exit(1);
+            }
             source_str = (char *)malloc(MAX_SOURCE_SIZE);
-            source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
+            char ch = getc(fp2);
+            while (ch != EOF){
+                source_str[count] = ch;
+                count++;
+                ch = getc(fp2);
+            }
+            ch = getc(fp);
+            source_str[count++] = '\n';
+            int skip_flag = 0;
+            while(ch != EOF){
+                if (ch == '#'){
+                    skip_flag = 1;
+                }
+                if (ch == '\n'){
+                    skip_flag = 0;
+                }
+                if (!skip_flag){
+                    source_str[count] = ch;
+                    count++;
+                }
+                ch = getc(fp);
+            }
             fclose(fp);
+            fclose(fp2);
         }
         catch (int a) {
             printf("%f", a);

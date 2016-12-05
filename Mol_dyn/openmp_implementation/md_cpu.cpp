@@ -149,7 +149,7 @@ void md(dim *position_arr, dim *velocity, dim *output_force, dim *nearest) {
     for (int n = 0; n < total_it; n ++){
         double total_energy = calculate_energy_force_lj(position_arr, nearest, output_force);
         motion(position_arr, velocity, output_force);
-        if (!(n % 1000)) {
+        if (n == (total_it - 1)) {
             printf("energy is %f \n", total_energy/particles_count);
         }
     }

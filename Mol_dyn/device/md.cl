@@ -1,4 +1,4 @@
-#include "../include/parameters.h"
+#include "parameters.h"
 
 __attribute__((reqd_work_group_size(particles_count, 1, 1)))
 __kernel void md(__global const float3 *restrict particles,

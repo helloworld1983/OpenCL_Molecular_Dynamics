@@ -39,7 +39,7 @@ int main()
     free(nearest);
     struct timeb end_total_time;
     ftime(&end_total_time);
-    printf("\nTotal execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
+    printf("Total execution time in ms =  %d", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
     return 0;
 }
 
@@ -135,7 +135,7 @@ void mc_method(dim *position_arr, dim *nearest) {
     double u1 = calculate_energy_lj(position_arr, nearest);
     while (1) {
         if ((good_iter == nmax) || (i == total_it)) {
-            printf("\nenergy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/particles_count, (float)good_iter/(float)total_it);
+            printf("energy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/particles_count, (float)good_iter/(float)total_it);
             break;
         }
         dim *tmp = (dim*)malloc(sizeof(dim)*particles_count);

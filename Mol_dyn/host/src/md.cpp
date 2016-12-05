@@ -48,7 +48,7 @@ void md(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, fl
         for (int i = 0; i < particles_count; i++)
             total_energy+=output_energy[i];
         total_energy/=(2 * particles_count);
-        if (!(n % 1000)){
+        if (n == (total_it - 1)){
             printf("energy is %f \n",total_energy);
         }
     }
