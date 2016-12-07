@@ -34,6 +34,8 @@ float energy_arr[particles_count] = {};
 extern float max_deviation;
 double kernel_total_time = 0.;
 int kernel_calls = 0;
+float final_energy = 0.;
+float good_iters_percent = 0;
 
 int main() {
     struct timeb start_total_time;
@@ -49,6 +51,8 @@ int main() {
     cleanup();
     struct timeb end_total_time;
     ftime(&end_total_time);
+    printf("energy is %f\n", final_energy);
+    printf("good iters percent %f \n", good_iters_percent);
     printf("Total execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
     printf("Kernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
     printf("Kernel execution time in milliseconds per iters = %0.3f ms", (kernel_total_time / (1000000.0 * kernel_calls)) );

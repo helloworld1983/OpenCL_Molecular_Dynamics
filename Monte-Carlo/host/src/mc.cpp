@@ -2,7 +2,9 @@
 
 extern double kernel_total_time;
 extern int kernel_calls;
-float max_deviation = 0.005;
+extern float final_energy;
+extern float good_iters_percent;
+float max_deviation = 0.007;
 
 void init_problem(cl_float3 *position_arr) {
     int count = 0;
@@ -31,7 +33,8 @@ void mc(cl_float3 *position_arr, float *energy_arr, cl_float3 *nearest) {
     float u1 = calculate_energy_lj(position_arr, energy_arr, nearest);
     while (1) {
         if ((good_iter == nmax) || (i == total_it)) {
-            printf("energy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/particles_count, (float)good_iter/(float)total_it);
+            final_energy = energy_ar[good_iter-1]/particles_count;
+            good_iters_percent = (float)good_iter/(float)total_it;
             kernel_calls = i;
             break;
         }

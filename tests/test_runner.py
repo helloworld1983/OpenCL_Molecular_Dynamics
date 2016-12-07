@@ -11,7 +11,7 @@ class Test_Runner:
 		self.results_time = dict()
 		self.kernel_time = dict()
 		self.results_energy = dict()
-		self.iters = 3
+		self.iters = 1
 		self.particles = [
 			16,
 			32,
@@ -87,6 +87,7 @@ class Test_Runner:
 				stdout, stderr = proc.communicate()
 				if not stderr:
 					res = stdout.split("\n")
+					print res
 					try:
 						self.results_energy["CPU"][count].append(re.findall("[-+]?\d+[\.]?\d*[eE]?[-+]?\d*", res[0]))
 					except:
@@ -104,6 +105,7 @@ class Test_Runner:
 				stdout, stderr = proc.communicate()
 				if not stderr:
 					res = stdout.split("\n")
+					print res
 					try:
 						self.results_energy["GPU"][count].append(re.findall("[-+]?\d+[\.]?\d*[eE]?[-+]?\d*", res[1]))
 					except:
@@ -126,6 +128,7 @@ class Test_Runner:
 				stdout, stderr = proc.communicate()
 				if not stderr:
 					res = stdout.split("\n")
+					print res
 					try:
 						self.results_energy["IOCL"][count].append(re.findall("[-+]?\d+[\.]?\d*[eE]?[-+]?\d*", res[1]))
 					except:
@@ -143,7 +146,6 @@ class Test_Runner:
 						self.kernel_time["IOCL"][count].append(re.findall("[-+]?\d+[\.]?\d*[eE]?[-+]?\d*", res[5]))
 				else:
 					print stderr
-
 
 	def import_results(self):
 		print "Energy"
