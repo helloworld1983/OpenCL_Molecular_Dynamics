@@ -131,7 +131,7 @@ double calculate_energy_force_lj(dim *position_arr, dim *nearest, dim *output_fo
                 double r12 = r6 * r6;
                 double r8 = r6 * sq_dist;
                 double r14 = r12 * sq_dist;
-                double multiplier = (12 * (1 / r14 - 1 / r8));
+                double multiplier = (24 * (2 / r14 - 1 / r8));
                 force_x += x * multiplier;
                 force_y += y * multiplier;
                 force_z += z * multiplier;

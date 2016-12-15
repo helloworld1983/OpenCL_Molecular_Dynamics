@@ -38,7 +38,7 @@ __kernel void md(__global const float3 *restrict particles,
             float r12 = r6 * r6;
             float r8 = r6 * sq_dist;
             float r14 = r12 * sq_dist;
-            force += r * (12 * (1 / r14 - 1 / r8));
+            force += r * (24 * (2 / r14 - 1 / r8));
             energy += 4 * (1 / r12 - 1 / r6);
         }
     }
