@@ -24,7 +24,7 @@ void mc_method(dim *position_arr, dim *nearest, int *charge);
 double calculate_energy_lj(dim *position_arr, dim *nearest, int *charge);
 double calculate_energy_coulomb(dim *position_arr, dim *nearest, int *charge);
 
-double max_deviation = 0.01;
+double max_deviation = 0.007;
 double (*calculate_energy)(dim*, dim*, int*);
 
 int main(int argc, char *argv[])

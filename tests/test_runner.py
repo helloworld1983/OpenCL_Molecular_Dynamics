@@ -6,12 +6,13 @@ import os
 
 class Test_Runner:
 
-	def __init__(self, method_name):
+	def __init__(self, method_name, potential = ""):
 		self.method_name = method_name
 		self.results_time = dict()
 		self.kernel_time = dict()
 		self.results_energy = dict()
-		self.iters = 1
+		self.potential = potential
+		self.iters = 3
 		self.particles = [
 			16,
 			32,
@@ -68,9 +69,9 @@ class Test_Runner:
 			sys.exit("unable to build intel gpu %s" % self.method_name)
 
 	def run_tests(self):
-		cmd_line_run_cpu = "%sCPU.exe" % self.run_prefix
-		cmd_line_run_gpu = "%sGPU" % self.run_prefix
-		cmd_line_run_iocl = "%sIOCL" % self.run_prefix
+		cmd_line_run_cpu = "%sCPU.exe" % (self.run_prefix)
+		cmd_line_run_gpu = "%sGPU.exe" % (self.run_prefix)
+		cmd_line_run_iocl = "%sIOCL.exe" % (self.run_prefix)
 		self.results_energy["CPU"] = dict()
 		self.results_time["CPU"] = dict()
 		self.results_energy["GPU"] = dict()
@@ -83,7 +84,7 @@ class Test_Runner:
 			self.prepare_test(os.path.join(os.path.dirname(os.path.realpath(__file__)), self.method_name, str(count) + "_" +  self.method_name + "_parameters.h"))
 			self.build_all()
 			for it in range(0,self.iters):
-				proc = subprocess.Popen(["../%s/" % (self.method_name)+cmd_line_run_cpu], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+				proc = subprocess.Popen(["../%s/" % (self.method_name) + cmd_line_run_cpu, self.potential], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
 				stdout, stderr = proc.communicate()
 				if not stderr:
 					res = stdout.split("\n")
@@ -101,7 +102,7 @@ class Test_Runner:
 				else:
 					print stderr
 
-				proc = subprocess.Popen(["../%s/" % (self.method_name)+cmd_line_run_gpu], stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = "../%s" % self.method_name)
+				proc = subprocess.Popen(["../%s/" % (self.method_name) + cmd_line_run_gpu, self.potential], stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = "../%s" % self.method_name)
 				stdout, stderr = proc.communicate()
 				if not stderr:
 					res = stdout.split("\n")
@@ -124,7 +125,7 @@ class Test_Runner:
 				else:
 					print stderr
 
-				proc = subprocess.Popen(["../%s/" % (self.method_name)+cmd_line_run_iocl], stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = "../%s" % self.method_name)
+				proc = subprocess.Popen(["../%s/" % (self.method_name) + cmd_line_run_iocl, self.potential], stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = "../%s" % self.method_name)
 				stdout, stderr = proc.communicate()
 				if not stderr:
 					res = stdout.split("\n")

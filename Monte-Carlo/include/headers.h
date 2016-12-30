@@ -3,15 +3,19 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/timeb.h>
+#include <time.h>
 #include "parameters.h"
 #include <string.h>
 
 #define MAX_PLATFORMS_COUNT 2
+#define COULOMB "--coulomb"
 
-void init_problem(cl_float3 *input);
-bool init_opencl();
-void run();
+bool init_opencl_lj();
+bool init_opencl_coulomb();
+void run_lj();
+void run_coulomb();
 void cleanup();
-void mc(cl_float3 *position_arr, float *energy_arr, cl_float3 *nearest);
+void init_problem(cl_float3 *input, cl_int *charge);
+void mc(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge);
 void nearest_image(cl_float3 *position_arr, cl_float3 *nearest);
-float calculate_energy_lj(cl_float3 *position_arr, float *energy_arr, cl_float3 *nearest);
+float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge);

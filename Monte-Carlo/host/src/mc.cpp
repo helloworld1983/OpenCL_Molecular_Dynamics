@@ -4,17 +4,24 @@ extern double kernel_total_time;
 extern int kernel_calls;
 extern float final_energy;
 extern float good_iters_percent;
+extern void (*run)();
 float max_deviation = 0.007;
 
-void init_problem(cl_float3 *position_arr) {
+void init_problem(cl_float3 *position_arr, cl_int *charge) {
     int count = 0;
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
         for (double j = -(box_size - initial_dist_to_edge)/2; j < (box_size - initial_dist_to_edge)/2; j += initial_dist_by_one_axis) {
             for (double l = -(box_size - initial_dist_to_edge)/2; l < (box_size - initial_dist_to_edge)/2; l += initial_dist_by_one_axis) {
-                if( count == particles_count){
+                if( count == particles_count ){
                     return;
                 }
                 position_arr[count] = (cl_float3){ i, j, l };
+                if (run == run_coulomb){
+                    if (count & 1)
+                        charge[count] = 1;
+                    else
+                        charge[count] = -1;
+                }
                 count++;
             }
         }
@@ -25,12 +32,12 @@ void init_problem(cl_float3 *position_arr) {
     }
 }
 
-void mc(cl_float3 *position_arr, float *energy_arr, cl_float3 *nearest) {
+void mc(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge) {
     int i = 0;
     int good_iter = 0;
     int good_iter_hung = 0;
     float energy_ar[nmax] = {};
-    float u1 = calculate_energy_lj(position_arr, energy_arr, nearest);
+    float u1 = calculate_energy(position_arr, energy_arr, nearest, charge);
     while (1) {
         if ((good_iter == nmax) || (i == total_it)) {
             final_energy = energy_ar[good_iter-1]/particles_count;
@@ -49,7 +56,7 @@ void mc(cl_float3 *position_arr, float *energy_arr, cl_float3 *nearest) {
             position_arr[particle].y = position_arr[particle].y + ex;
             position_arr[particle].z = position_arr[particle].z + ex;
         }
-        double u2 = calculate_energy_lj(position_arr, energy_arr, nearest);
+        double u2 = calculate_energy(position_arr, energy_arr, nearest, charge);
         double deltaU_div_T = (u1 - u2) / Temperature;
         double probability = exp(deltaU_div_T);
         double rand_0_1 = (double)rand() / (double)RAND_MAX;
@@ -66,7 +73,7 @@ void mc(cl_float3 *position_arr, float *energy_arr, cl_float3 *nearest) {
     }
 }
 
-float calculate_energy_lj(cl_float3 *position_arr, float *energy_arr, cl_float3 *nearest) {
+float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge) {
     nearest_image(position_arr, nearest);
     memset(energy_arr, 0, sizeof(energy_arr));
     run();
