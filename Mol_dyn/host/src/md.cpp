@@ -1,6 +1,8 @@
 #include "headers.h"
 
-void init_problem(cl_float3 *position_arr, cl_float3 *velocity) {
+extern void (*run)();
+
+void init_problem(cl_float3 *position_arr, cl_float3 *velocity, cl_int *charge) {
     int count = 0;
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
         for (double j = -(box_size - initial_dist_to_edge)/2; j < (box_size - initial_dist_to_edge)/2; j += initial_dist_by_one_axis) {
@@ -10,6 +12,12 @@ void init_problem(cl_float3 *position_arr, cl_float3 *velocity) {
                 }
                 position_arr[count] = (cl_float3){ i, j, l };
                 velocity[count] = (cl_float3){ 0, 0, 0 };
+                if (run == run_coulomb){
+                    if (count & 1)
+                        charge[count] = 1;
+                    else
+                        charge[count] = -1;
+                }
                 count++;
             }
         }
@@ -31,7 +39,7 @@ void motion(cl_float3 *position_arr, cl_float3 *velocity, cl_float3 *output_forc
     }
 }
 
-void calculate_energy_force_lj(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, float *output_energy) {
+void calculate_energy_force(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, cl_float *output_energy, cl_int *charge) {
     nearest_image(position_arr, nearest);
     for (int i = 0; i < particles_count; i++){
         output_force[i] = (cl_float3){0, 0, 0};
@@ -40,9 +48,9 @@ void calculate_energy_force_lj(cl_float3 *position_arr, cl_float3 *nearest, cl_f
     run();
 }
 
-void md(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, float *output_energy, cl_float3 *velocity) {
+void md(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, cl_float *output_energy, cl_float3 *velocity, cl_int *charge) {
     for (int n = 0; n < total_it; n ++){
-        calculate_energy_force_lj(position_arr, nearest, output_force, output_energy);
+        calculate_energy_force(position_arr, nearest, output_force, output_energy, charge);
         motion(position_arr, velocity, output_force);
         float total_energy = 0;
         for (int i = 0; i < particles_count; i++)
