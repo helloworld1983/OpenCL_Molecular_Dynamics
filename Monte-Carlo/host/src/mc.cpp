@@ -2,7 +2,7 @@
 
 extern double kernel_total_time;
 extern int kernel_calls;
-extern float final_energy;
+extern cl_float final_energy;
 extern float good_iters_percent;
 extern void (*run)();
 float max_deviation = 0.007;
@@ -73,7 +73,7 @@ void mc(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_in
     }
 }
 
-float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge) {
+cl_float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge) {
     nearest_image(position_arr, nearest);
     memset(energy_arr, 0, sizeof(energy_arr));
     run();

@@ -33,10 +33,11 @@ cl_float3 position_arr[particles_count] = {};
 cl_float3 nearest[particles_count] = {};
 cl_float energy_arr[particles_count] = {};
 cl_int charge[particles_count] = {};
+
 extern float max_deviation;
 double kernel_total_time = 0.;
 int kernel_calls = 0;
-float final_energy = 0.;
+cl_float final_energy = 0.;
 float good_iters_percent = 0;
 
 bool (*init_opencl)() = init_opencl_lj;
@@ -120,7 +121,7 @@ bool init_opencl_lj() {
     checkError(status, "Failed to create command queue");
 
     #ifdef ALTERA
-        std::string binary_file = getBoardBinaryFile("mc", device);
+        std::string binary_file = getBoardBinaryFile("mc_lj", device);
         printf("Using AOCX: %s\n", binary_file.c_str());
         program = createProgramFromBinary(context, binary_file.c_str(), &device, 1);
     #else
@@ -172,7 +173,6 @@ bool init_opencl_lj() {
         catch (int a) {
             printf("%f", a);
         }
-        printf("program is%s\n", source_str);
         program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &status);
     #endif
 
@@ -242,7 +242,7 @@ bool init_opencl_coulomb() {
     checkError(status, "Failed to create command queue");
 
     #ifdef ALTERA
-        std::string binary_file = getBoardBinaryFile("mc", device);
+        std::string binary_file = getBoardBinaryFile("mc_coulomb", device);
         printf("Using AOCX: %s\n", binary_file.c_str());
         program = createProgramFromBinary(context, binary_file.c_str(), &device, 1);
     #else

@@ -18,4 +18,4 @@ void cleanup();
 void init_problem(cl_float3 *input, cl_int *charge);
 void mc(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge);
 void nearest_image(cl_float3 *position_arr, cl_float3 *nearest);
-float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge);
+cl_float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge);
