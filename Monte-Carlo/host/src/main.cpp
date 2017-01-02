@@ -1,4 +1,6 @@
 #include "headers.h"
+#include "mc.cpp"
+
 #ifdef ALTERA
     #include "AOCL_Utils.h"
     using namespace aocl_utils;
@@ -70,6 +72,13 @@ int main(int argc, char *argv[]) {
     printf("Total execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
     printf("Kernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
     printf("Kernel execution time in milliseconds per iters = %0.3f ms", (kernel_total_time / (1000000.0 * kernel_calls)) );
+
+    LOG_PRINT("energy is %f", final_energy);
+    LOG_PRINT("good iters percent %f", good_iters_percent);
+    LOG_PRINT("Total execution time in ms =  %d", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
+    LOG_PRINT("Kernel execution time in milliseconds = %f ms", (kernel_total_time / 1000000.0) );
+    LOG_PRINT("Kernel execution time in milliseconds per iters = %f ms", (kernel_total_time / (1000000.0 * kernel_calls)) );
+
     return 0;
 }
 

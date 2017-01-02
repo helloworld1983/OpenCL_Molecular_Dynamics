@@ -7,6 +7,7 @@
 #include <omp.h>
 #include <string.h>
 #include "parameters.h"
+#include "logger.h"
 
 #define NUM_THREADS 8
 #define COULOMB "--coulomb"
@@ -26,6 +27,7 @@ double calculate_energy_coulomb(dim *position_arr, dim *nearest, int *charge);
 
 double max_deviation = 0.007;
 double (*calculate_energy)(dim*, dim*, int*);
+double final_energy = 0;
 
 int main(int argc, char *argv[])
 {
@@ -52,6 +54,8 @@ int main(int argc, char *argv[])
     struct timeb end_total_time;
     ftime(&end_total_time);
     printf("Total execution time in ms =  %d", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
+    LOG_PRINT("Total execution time in ms =  %d", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
+    LOG_PRINT("Energy is %f", final_energy);
     return 0;
 }
 
@@ -186,6 +190,7 @@ void mc_method(dim *position_arr, dim *nearest, int *charge) {
     double u1 = calculate_energy(position_arr, nearest, charge);
     while (1) {
         if ((good_iter == nmax) || (i == total_it)) {
+            final_energy = energy_ar[good_iter-1] / particles_count;
             printf("energy is %f \ngood iters percent %f \n", energy_ar[good_iter-1]/particles_count, (float)good_iter/(float)i);
             break;
         }
