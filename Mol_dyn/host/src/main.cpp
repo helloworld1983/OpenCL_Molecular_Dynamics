@@ -1,4 +1,6 @@
 #include "headers.h"
+#include "md.cpp"
+
 #ifdef ALTERA
     #include "AOCL_Utils.h"
     using namespace aocl_utils;
@@ -37,7 +39,7 @@ cl_int charge[particles_count] = {};
 cl_float output_energy[particles_count] = {};
 cl_float3 output_force[particles_count] = {};
 double kernel_total_time = 0.;
-
+cl_float final_energy = 0.;
 bool (*init_opencl)() = init_opencl_lj;
 void (*run)() = run_lj;
 
@@ -60,7 +62,13 @@ int main(int argc, char *argv[]) {
     ftime(&end_total_time);
     printf("Total execution time in ms =  %d\n", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
     printf("Kernel execution time in milliseconds = %0.3f ms\n", (kernel_total_time / 1000000.0) );
-    printf("\nKernel execution time in milliseconds per iters = %0.3f ms\n", (kernel_total_time / ( total_it * 1000000.0)) );
+    printf("Kernel execution time in milliseconds per iters = %0.3f ms\n", (kernel_total_time / ( total_it * 1000000.0)) );
+    printf("energy is %f \n",final_energy);
+
+    LOG_PRINT("Total execution time in ms =  %d", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
+    LOG_PRINT("Kernel execution time in milliseconds = %f ms", (kernel_total_time / 1000000.0) );
+    LOG_PRINT("Kernel execution time in milliseconds per iters = %f ms", (kernel_total_time / ( total_it * 1000000.0)) );
+    LOG_PRINT("energy is %f",final_energy);
     return 0;
 }
 

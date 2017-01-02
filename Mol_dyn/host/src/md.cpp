@@ -1,6 +1,7 @@
 #include "headers.h"
 
 extern void (*run)();
+extern cl_float final_energy;
 
 void init_problem(cl_float3 *position_arr, cl_float3 *velocity, cl_int *charge) {
     int count = 0;
@@ -57,7 +58,7 @@ void md(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, cl
             total_energy+=output_energy[i];
         total_energy/=(2 * particles_count);
         if (n == (total_it - 1)){
-            printf("energy is %f \n",total_energy);
+            final_energy = total_energy;
         }
     }
 }
