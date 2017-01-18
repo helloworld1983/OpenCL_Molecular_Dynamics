@@ -7,7 +7,6 @@
 #include <omp.h>
 #include <string.h>
 #include "parameters.h"
-#include "logger.h"
 
 #define NUM_THREADS 8
 #define COULOMB "--coulomb"
@@ -54,8 +53,6 @@ int main(int argc, char *argv[])
     struct timeb end_total_time;
     ftime(&end_total_time);
     printf("Total execution time in ms =  %d", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
-    LOG_PRINT("Total execution time in ms =  %d", (int)((end_total_time.time - start_total_time.time) * 1000 + end_total_time.millitm - start_total_time.millitm));
-    LOG_PRINT("Energy is %f", final_energy);
     return 0;
 }
 

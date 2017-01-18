@@ -5,7 +5,6 @@
 #include <sys/timeb.h>
 #include "parameters.h"
 #include <string.h>
-#include "logger.h"
 
 #define MAX_PLATFORMS_COUNT 2
 #define COULOMB "--coulomb"

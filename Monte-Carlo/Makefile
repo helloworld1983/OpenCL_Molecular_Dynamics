@@ -19,7 +19,6 @@ SRCS_FILES = $(foreach F, $(SRCS), host/src/$(F))
 COMMON_FILES = ../common/src/AOCL_Utils.cpp
 
 HEADERS = ./include
-LOGGER = ../logger
 # arm cross compiler
 CROSS-COMPILE = arm-linux-gnueabihf-
 
@@ -40,16 +39,16 @@ SRCS_CPU = mc_cpu.cpp
 SRCS_CPU_FILES = $(foreach F, $(SRCS_CPU), openmp_implementation/$(F))
 
 all :
-	$(CROSS-COMPILE)g++ -w -D ALTERA -I $(HEADERS) -I $(LOGGER) $(SRCS_FILES) $(COMMON_FILES) -o $(TARGET) $(AOCL_COMPILE_CONFIG) $(AOCL_LINK_CONFIG)
+	$(CROSS-COMPILE)g++ -w -D ALTERA -I $(HEADERS) $(SRCS_FILES) $(COMMON_FILES) -o $(TARGET) $(AOCL_COMPILE_CONFIG) $(AOCL_LINK_CONFIG)
 
 nvidia_gpu :
-	g++ $(SRCS_FILES) -I $(GPU_INCLUDE) -I $(HEADERS) -I $(LOGGER) -D NVIDIA -L $(GPU_LIB) -o $(TARGET_GPU) -lOpenCL -w
+	g++ $(SRCS_FILES) -I $(GPU_INCLUDE) -I $(HEADERS) -D NVIDIA -L $(GPU_LIB) -o $(TARGET_GPU) -lOpenCL -w
 
 cpu :
-	g++ $(SRCS_CPU_FILES) -I $(HEADERS) -I $(LOGGER) -O3 -o $(TARGET_CPU) -fopenmp -w
+	g++ $(SRCS_CPU_FILES) -I $(HEADERS) -O3 -o $(TARGET_CPU) -fopenmp -w
 
 intel_gpu :
-	g++ $(SRCS_FILES) -I $(IOCL_INCLUDE) -I $(HEADERS) -I $(LOGGER) -D IOCL -L $(IOCL_LIB) -o $(TARGET_IOCL) -lOpenCL -w
+	g++ $(SRCS_FILES) -I $(IOCL_INCLUDE) -I $(HEADERS) -D IOCL -L $(IOCL_LIB) -o $(TARGET_IOCL) -lOpenCL -w
 
 clean :
 	@rm -f *.o $(TARGET)
