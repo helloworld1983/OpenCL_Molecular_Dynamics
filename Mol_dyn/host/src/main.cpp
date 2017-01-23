@@ -51,6 +51,15 @@ int main(int argc, char *argv[]) {
             init_opencl = init_opencl_coulomb;
             run = run_coulomb;
         }
+        else{
+        	if (!strcmp(argv[1], "--help")){
+        		printf("Usage: %s [--help][--coulomb]", argv[0]);
+        	}
+        	else{
+        		printf("invalid argument\n");
+        		printf("Usage: %s [--help][--coulomb]", argv[0]);
+        	}
+        }
     }
     if(!init_opencl()) {
       return -1;
