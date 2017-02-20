@@ -7,3 +7,5 @@
 #define Temperature 1.3
 #define initial_dist_by_one_axis 2
 #define initial_dist_to_edge 2
+#define SIGMA 0.221f
+#define DERIVATIVE_ERF 2.556f

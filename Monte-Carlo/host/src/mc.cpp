@@ -1,5 +1,13 @@
-#include "headers.h"
+/**
+ * @file md.cpp
+ * @brief Implement MD algorithm
+ */
 
+/*
+ * Includes
+ */
+#include "headers.h"
+/** needs to print information in main.cpp */
 extern double kernel_total_time;
 extern int kernel_calls;
 extern cl_float final_energy;
@@ -7,6 +15,12 @@ extern float good_iters_percent;
 extern void (*run)();
 float max_deviation = 0.007;
 
+/**
+ * @brief set initial coordinates and charges for all particles
+ * @param position_arr Position array
+ * @param charge Charge array
+ * @return void
+ */
 void init_problem(cl_float3 *position_arr, cl_int *charge) {
     int count = 0;
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
@@ -32,6 +46,14 @@ void init_problem(cl_float3 *position_arr, cl_int *charge) {
     }
 }
 
+/**
+ * @brief perform MC iterations
+ * @param position_arr Position array
+ * @param energy_arr energy array
+ * @param nearest nearest array
+ * @param charge array Charge array
+ * @return void
+ */
 void mc(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge) {
     int i = 0;
     int good_iter = 0;
@@ -48,7 +70,7 @@ void mc(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_in
         cl_float3 tmp[particles_count];
         memcpy(tmp, position_arr, sizeof(cl_float3)*particles_count);
         for (int particle = 0; particle < particles_count; particle++) {
-            //offset between -max_deviation/2 and max_deviation/2
+            /** offset between -max_deviation/2 and max_deviation/2 */
             double ex = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
             double ey = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
             double ez = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
@@ -73,6 +95,14 @@ void mc(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_in
     }
 }
 
+/**
+ * @brief calculate energy on device
+ * @param position_arr Position array
+ * @param energy_arr energy array
+ * @param nearest nearest array
+ * @param charge array Charge array
+ * @return void
+ */
 cl_float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_float3 *nearest, cl_int *charge) {
     nearest_image(position_arr, nearest);
     memset(energy_arr, 0, sizeof(energy_arr));
@@ -84,6 +114,12 @@ cl_float calculate_energy(cl_float3 *position_arr, cl_float *energy_arr, cl_floa
     return total_energy;
 }
 
+/**
+ * @brief first part of implementation of periodic boundary conditions
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @return void
+ */
 void nearest_image(cl_float3 *position_arr, cl_float3 *nearest){
     for (int i = 0; i < particles_count; i++){
         float x,y,z;

@@ -1,12 +1,23 @@
-#include "parameters.h"
+/**
+ * @file mc_coulomb.cl
+ * @brief OpenCL kernel which calculate energy
+ */
 
+#include "parameters.h"
+/**
+ * @brief OpenCL kernel for coulomb potential
+ * @param particles Position array
+ * @param charge Charge array
+ * @param out_energy Energy which describe how one particles iteract which all others
+ * @return void
+ */
 __attribute__((reqd_work_group_size(particles_count, 1, 1)))
 __kernel void mc(__global const float3 *restrict particles,
                  __global const int *restrict charge,
-                 __global float *restrict out) {
+                 __global float *restrict out_energy) {
     int index = get_global_id(0);
     float energy = 0;
-    #pragma unroll 8
+    #pragma unroll 4
     for (int i = 0; i < particles_count; i++) {
         float x = particles[i].x - particles[index].x;
         float y = particles[i].y - particles[index].y;
@@ -31,9 +42,18 @@ __kernel void mc(__global const float3 *restrict particles,
         }
         if (i != index) {
             float3 r = (float3)(x, y, z);
-            energy += charge[i] * charge[index] / fast_length(r);
+            float dist = fast_length(r);
+            float inv_dist = native_divide(1, dist);
+            if ((charge[index] == -1) || (charge[i] == -1)){
+                float erf_arg = native_divide(dist, SIGMA);
+                float multiplier = erf(erf_arg);
+                energy += charge[i] * charge[index] * multiplier * inv_dist;
+            }
+            else{
+                energy += charge[i] * charge[index] * inv_dist;
+            }
         }
     }
-    out[index] = energy;
+    out_energy[index] = energy;
 }
 

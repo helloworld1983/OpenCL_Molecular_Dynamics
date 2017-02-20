@@ -1,5 +1,16 @@
-#include "parameters.h"
+/**
+ * @file md_lj.cl
+ * @brief OpenCL kernel which calculate energy and force
+ */
 
+#include "parameters.h"
+/**
+ * @brief OpenCL kernel for LJ
+ * @param particles Position array
+ * @param out_energy Energy which describe how one particles iteract which all others
+ * @param out_force Force acting on the particle from all others
+ * @return void
+ */
 __attribute__((reqd_work_group_size(particles_count, 1, 1)))
 __kernel void md(__global const float3 *restrict particles,
                  __global float *restrict out_energy,
@@ -13,6 +24,7 @@ __kernel void md(__global const float3 *restrict particles,
         float x = particles[i].x - particles[index].x;
         float y = particles[i].y - particles[index].y;
         float z = particles[i].z - particles[index].z;
+        /* second part of implementation periodic boundary conditions */
         if (x > half_box)
             x -= box_size;
         else {

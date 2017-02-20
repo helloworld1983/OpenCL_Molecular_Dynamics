@@ -1,8 +1,23 @@
+/**
+ * @file md.cpp
+ * @brief Implement MD algorithm
+ */
+
+/*
+ * Includes
+ */
 #include "headers.h"
 
 extern void (*run)();
 extern cl_float final_energy;
 
+/**
+ * @brief set initial coordinates,velocities and charges for all particles
+ * @param position_arr Position array
+ * @param velocity Velocity array
+ * @param charge Charge array
+ * @return void
+ */
 void init_problem(cl_float3 *position_arr, cl_float3 *velocity, cl_int *charge) {
     int count = 0;
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
@@ -29,26 +44,54 @@ void init_problem(cl_float3 *position_arr, cl_float3 *velocity, cl_int *charge) 
     }
 }
 
+/**
+ * @brief solve motion equation's using Euler method
+ * @param position_arr Position array
+ * @param velocity Velocity array
+ * @param output_force force array
+ * @return void
+ */
 void motion(cl_float3 *position_arr, cl_float3 *velocity, cl_float3 *output_force) {
     for (int i = 0; i < particles_count; i++) {
+        /* v+= f * dt */
         velocity[i] = (cl_float3) {velocity[i].x + output_force[i].x * dt,
             velocity[i].y + output_force[i].y * dt,
             velocity[i].z + output_force[i].z * dt};
+        /* r+= v * dt */
         position_arr[i] = (cl_float3) {position_arr[i].x + velocity[i].x * dt,
             position_arr[i].y + velocity[i].y * dt,
             position_arr[i].z + velocity[i].z * dt};
     }
 }
 
+/**
+ * @brief calculate energy and force on device
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @param output_force force array, calculated on device
+ * @param output_energy energy array
+ * @param charge array Charge array
+ * @return void
+ */
 void calculate_energy_force(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, cl_float *output_energy, cl_int *charge) {
     nearest_image(position_arr, nearest);
     for (int i = 0; i < particles_count; i++){
         output_force[i] = (cl_float3){0, 0, 0};
         output_energy[i] = 0;
     }
+    /** run kernel */
     run();
 }
 
+/**
+ * @brief perform MD iterations
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @param output_force force array, calculated on device
+ * @param output_energy energy array
+ * @param charge array Charge array
+ * @return void
+ */
 void md(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, cl_float *output_energy, cl_float3 *velocity, cl_int *charge) {
     for (int n = 0; n < total_it; n ++){
         calculate_energy_force(position_arr, nearest, output_force, output_energy, charge);
@@ -63,6 +106,12 @@ void md(cl_float3 *position_arr, cl_float3 *nearest, cl_float3 *output_force, cl
     }
 }
 
+/**
+ * @brief first part of implementation of periodic boundary conditions
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @return void
+ */
 void nearest_image(cl_float3 *position_arr, cl_float3 *nearest){
     for (int i = 0; i < particles_count; i++){
         float x,y,z;

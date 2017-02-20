@@ -1,4 +1,18 @@
+/**
+ * @mainpage Implementation of classical molecular dynamics(MD) and Monte-Carlo(MC) algorithms on Altera FPGA using OpenCL
+ * @author Andrey Parfenov a1994ndrey@gmail.com
+ * @bug No known bugs
+ */
+/**
+ * @file main.cpp
+ * @brief Initialize OpenCL platform,device e.t.c
+ */
+
+/*
+ * Includes
+ */
 #include "headers.h"
+ /** add MD algorithm implementation */
 #include "md.cpp"
 
 #ifdef ALTERA
@@ -20,6 +34,9 @@
     #define VENDOR "Intel(R) Corporation"
 #endif
 
+/*
+ * OpenCL variables and buffers
+ */
 cl_platform_id platform = NULL;
 cl_device_id device;
 cl_context context = NULL;
@@ -31,6 +48,9 @@ cl_mem output_energy_buf;
 cl_mem output_force_buf;
 cl_mem charge_buf;
 
+/*
+ * Host buffers
+ */
 cl_float3 position_arr[particles_count] = {};
 cl_float3 nearest[particles_count] = {};
 cl_float3 velocity[particles_count] = {};
@@ -43,11 +63,14 @@ cl_float final_energy = 0.;
 bool (*init_opencl)() = init_opencl_lj;
 void (*run)() = run_lj;
 
+/** @brief main.cpp entrypoint
+ * @param argv[1] --coulomb or --help or None
+ */
 int main(int argc, char *argv[]) {
     struct timeb start_total_time;
     ftime(&start_total_time);
     if (argc > 1){
-        if (!strcmp(argv[1], COULOMB)){
+        if (!strcmp(argv[1], "--coulomb")){
             init_opencl = init_opencl_coulomb;
             run = run_coulomb;
         }
@@ -58,6 +81,7 @@ int main(int argc, char *argv[]) {
         	else{
         		printf("invalid argument\n");
         		printf("Usage: %s [--help][--coulomb]", argv[0]);
+                return -1;
         	}
         }
     }
@@ -76,9 +100,15 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-/////// HELPER FUNCTIONS ///////
+/**
+ * helper functions
+ */
 
-// Initializes the OpenCL objects.
+/**
+ * LJ and Coulomb potentials requires different kernels and buffers
+ * @brief initialize OpenCL variables for LJ potentional
+ * @return True if initialized successfully, False if error occured
+ */
 bool init_opencl_lj() {
     cl_int status;
 
@@ -111,7 +141,6 @@ bool init_opencl_lj() {
         scoped_array<cl_device_id> devices;
         cl_uint num_devices;
         devices.reset(getDevices(platform, CL_DEVICE_TYPE_ALL, &num_devices));
-        // We'll just use the first device.
         device = devices[0];
     #else
         cl_uint num_devices;
@@ -159,7 +188,7 @@ bool init_opencl_lj() {
             source_str[count++] = '\n';
             int skip_flag = 0;
             while(ch != EOF){
-                if (ch == '#'){
+                if (ch == '#'){ /** due to bug with NVIDIA OpenCL I cannot use "#include" inside kernel code with NVIDIA OpenCL */
                     skip_flag = 1;
                 }
                 if (ch == '\n'){
@@ -187,12 +216,16 @@ bool init_opencl_lj() {
     kernel = clCreateKernel(program, kernel_name, &status);
     checkError(status, "Failed to create kernel");
 
-    // Input buffer.
+    /**
+     * Input buffer
+     */
     nearest_buf = clCreateBuffer(context, CL_MEM_READ_ONLY,
         particles_count * sizeof(cl_float3), NULL, &status);
     checkError(status, "Failed to create buffer for nearest");
 
-    // Output buffers.
+    /**
+     * Output buffers
+     */
     output_energy_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
         particles_count * sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for output_en");
@@ -204,9 +237,12 @@ bool init_opencl_lj() {
     return true;
 }
 
+/**
+ * @brief initialize OpenCL variables for coulomb potentional
+ * @return True if initialized successfully, False if error occured
+ */
 bool init_opencl_coulomb() {
     cl_int status;
-
     printf("Initializing OpenCL\n");
     #ifdef ALTERA
         if(!setCwdToExeDir()) {
@@ -236,7 +272,6 @@ bool init_opencl_coulomb() {
         scoped_array<cl_device_id> devices;
         cl_uint num_devices;
         devices.reset(getDevices(platform, CL_DEVICE_TYPE_ALL, &num_devices));
-        // We'll just use the first device.
         device = devices[0];
     #else
         cl_uint num_devices;
@@ -284,7 +319,7 @@ bool init_opencl_coulomb() {
             source_str[count++] = '\n';
             int skip_flag = 0;
             while(ch != EOF){
-                if (ch == '#'){
+                if (ch == '#'){ /** due to bug with NVIDIA OpenCL I cannot use "#include" inside kernel code with NVIDIA OpenCL */
                     skip_flag = 1;
                 }
                 if (ch == '\n'){
@@ -312,17 +347,17 @@ bool init_opencl_coulomb() {
     kernel = clCreateKernel(program, kernel_name, &status);
     checkError(status, "Failed to create kernel");
 
-    // Input buffer.
+    /** Input buffer */
     nearest_buf = clCreateBuffer(context, CL_MEM_READ_ONLY,
         particles_count * sizeof(cl_float3), NULL, &status);
     checkError(status, "Failed to create buffer for nearest");
 
-    //charge buffer
+    /** Charge buffer */
     charge_buf = clCreateBuffer(context, CL_MEM_READ_ONLY,
         particles_count * sizeof(cl_int), NULL, &status);
     checkError(status, "Failed to create buffer for charge");
 
-    // Output buffers.
+    /** Output buffers */
     output_energy_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
         particles_count * sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for output_en");
@@ -334,6 +369,10 @@ bool init_opencl_coulomb() {
     return true;
 }
 
+/**
+ * @brief run OpenCL kernel for LJ
+ * @return void
+ */
 void run_lj() {
     cl_int status;
 
@@ -370,23 +409,25 @@ void run_lj() {
     status = clEnqueueReadBuffer(queue, output_force_buf, CL_FALSE,
         0, particles_count * sizeof(cl_float3), output_force, 1, &kernel_event, &finish_event[1]);
 
-    // Release local events.
     clReleaseEvent(write_event);
 
-    // Wait for all devices to finish.
     clWaitForEvents(2, finish_event);
 
+    /** measure kernel time */
     clGetEventProfilingInfo(kernel_event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
     clGetEventProfilingInfo(kernel_event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
     total_time = time_end - time_start;
     kernel_total_time += total_time;
 
-    // Release all events.
     clReleaseEvent(kernel_event);
     clReleaseEvent(finish_event[0]);
     clReleaseEvent(finish_event[1]);
 }
 
+/**
+ * @brief run OpenCL kernel for coulomb potential
+ * @return void
+ */
 void run_coulomb() {
     cl_int status;
 
@@ -430,25 +471,26 @@ void run_coulomb() {
     status = clEnqueueReadBuffer(queue, output_force_buf, CL_FALSE,
         0, particles_count * sizeof(cl_float3), output_force, 1, &kernel_event, &finish_event[1]);
 
-    // Release local events.
     clReleaseEvent(write_event[0]);
     clReleaseEvent(write_event[1]);
 
-    // Wait for all devices to finish.
     clWaitForEvents(2, finish_event);
 
+    /* measure kernel time */
     clGetEventProfilingInfo(kernel_event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
     clGetEventProfilingInfo(kernel_event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
     total_time = time_end - time_start;
     kernel_total_time += total_time;
 
-    // Release all events.
     clReleaseEvent(kernel_event);
     clReleaseEvent(finish_event[0]);
     clReleaseEvent(finish_event[1]);
 }
 
-// Free the resources allocated during initialization
+/**
+ * @brief Free the resources allocated during initialization
+ * @return void
+ */
 void cleanup() {
     if(kernel) {
       clReleaseKernel(kernel);

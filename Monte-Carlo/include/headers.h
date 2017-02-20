@@ -1,3 +1,11 @@
+/**
+ * @file headers.h
+ * @brief includes and functions prototypes
+ */
+
+/*
+ * Includes
+ */
 #include "CL/opencl.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,8 +16,10 @@
 #include <string.h>
 
 #define MAX_PLATFORMS_COUNT 2
-#define COULOMB "--coulomb"
 
+/**
+ * Prototypes
+ */
 bool init_opencl_lj();
 bool init_opencl_coulomb();
 void run_lj();

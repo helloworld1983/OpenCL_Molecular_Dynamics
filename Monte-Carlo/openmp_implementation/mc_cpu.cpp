@@ -1,3 +1,11 @@
+/**
+ * @file mс_cpu.cpp
+ * @brief OpenMP implementation 03, 8 threads
+ */
+
+ /*
+ * Includes
+ */
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -9,8 +17,10 @@
 #include "parameters.h"
 
 #define NUM_THREADS 8
-#define COULOMB "--coulomb"
 
+/**
+ * Structs
+ */
 struct dim {
     double x;
     double y;
@@ -18,6 +28,9 @@ struct dim {
 };
 typedef struct dim dim;
 
+/**
+ * Prototypes
+ */
 void nearest_image(dim *position_arr, dim *nearest);
 void init_problem(dim *position_arr, int *charge);
 void mc_method(dim *position_arr, dim *nearest, int *charge);
@@ -28,12 +41,28 @@ double max_deviation = 0.007;
 double (*calculate_energy)(dim*, dim*, int*);
 double final_energy = 0;
 
+/** @brief mс_cpu.cpp entrypoint
+ *
+ * @details This is entrypoint for МС simulation
+ * @param argv[1] --coulomb or --help or None
+ * @return return 0 or -1
+ */
 int main(int argc, char *argv[])
 {
     calculate_energy = calculate_energy_lj;
     if (argc > 1){
-        if (!strcmp(argv[1], COULOMB)){
+        if (!strcmp(argv[1], "--coulomb")){
             calculate_energy = calculate_energy_coulomb;
+        }
+        else{
+            if (!strcmp(argv[1], "--help")){
+                printf("Usage: %s [--help][--coulomb]", argv[0]);
+            }
+            else{
+                printf("invalid argument\n");
+                printf("Usage: %s [--help][--coulomb]", argv[0]);
+                return -1;
+            }
         }
     }
     struct timeb start_total_time;
@@ -56,8 +85,16 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-/////// HELPER FUNCTIONS ///////
+/**
+ * helper functions
+ */
 
+/**
+ * @brief set initial coordinates and charges for all particles
+ * @param position_arr Position array
+ * @param charge Charge array
+ * @return void
+ */
 void init_problem(dim *position_arr, int *charge) {
     int count = 0;
     for (double i = -(box_size - initial_dist_to_edge)/2; i < (box_size - initial_dist_to_edge)/2; i += initial_dist_by_one_axis) {
@@ -83,6 +120,12 @@ void init_problem(dim *position_arr, int *charge) {
     }
 }
 
+/**
+ * @brief first part of implementation of periodic boundary conditions
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @return void
+ */
 void nearest_image(dim *position_arr, dim *nearest){
     for (int i = 0; i < particles_count; i++){
         float x,y,z;
@@ -108,15 +151,23 @@ void nearest_image(dim *position_arr, dim *nearest){
     }
 }
 
+/**
+ * @brief calculate energy for LJ
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @param charge array Charge array
+ * @return void
+ */
 double calculate_energy_lj(dim *position_arr, dim *nearest, int *charge){
     nearest_image(position_arr, nearest);
     double energy = 0;
     #pragma omp parallel for reduction(+:energy) num_threads(NUM_THREADS)
     for (int i = 0; i < particles_count; i++) {
-        for (int j = 0; j < i; j++) {
+        for (int j = 0; j < particles_count; j++) {
             float x = nearest[j].x - nearest[i].x;
             float y = nearest[j].y - nearest[i].y;
             float z = nearest[j].z - nearest[i].z;
+            /* second part of implementation of periodic boundary conditions */
             if (x > half_box)
                 x -= box_size;
             else {
@@ -136,25 +187,34 @@ double calculate_energy_lj(dim *position_arr, dim *nearest, int *charge){
                     z += box_size;
             }
             float sq_dist = x * x + y * y + z * z;
-            if (sq_dist < rc * rc) {
+            if ((i != j) && (sq_dist < rc * rc)) {
                 double r6 = sq_dist * sq_dist * sq_dist;
                 double r12 = r6 * r6;
                 energy += 4 * (1 / r12 - 1 / r6);
             }
         }
     }
-    return energy;
+    /** we consider each interaction twice, so we need to divide by 2 */
+    return energy/2;
 }
 
+/**
+ * @brief calculate energy for coulomb
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @param charge array Charge array
+ * @return energy
+ */
 double calculate_energy_coulomb(dim *position_arr, dim *nearest, int *charge){
     nearest_image(position_arr, nearest);
     double energy = 0;
     #pragma omp parallel for reduction(+:energy) num_threads(NUM_THREADS)
     for (int i = 0; i < particles_count; i++) {
-        for (int j = 0; j < i; j++) {
+        for (int j = 0; j < particles_count; j++) {
             float x = nearest[j].x - nearest[i].x;
             float y = nearest[j].y - nearest[i].y;
             float z = nearest[j].z - nearest[i].z;
+            /* second part of implementation of periodic boundary conditions */
             if (x > half_box)
                 x -= box_size;
             else {
@@ -173,12 +233,31 @@ double calculate_energy_coulomb(dim *position_arr, dim *nearest, int *charge){
                 if (z < -half_box)
                     z += box_size;
             }
-            energy += charge[i] * charge[j] / sqrt(x * x + y * y + z * z);
+            if (i != j ) {
+                double sq_dist = x * x + y * y + z * z;
+                double dist = sqrt(sq_dist);
+                if ((charge[i] == -1) || (charge[j] == -1)){
+                    double erf_arg = dist / SIGMA;
+                    double multiplier = erf(erf_arg);
+                    energy += charge[i] * charge[j] * multiplier / dist;
+                }
+                else{
+                    energy += charge[i] * charge[j] / dist;
+                }
+            }
         }
     }
-    return energy;
+    /** we consider each interaction twice, so we need to divide by 2 */
+    return energy/2;
 }
 
+/**
+ * @brief perform MC iterations
+ * @param position_arr Position array
+ * @param nearest nearest array
+ * @param charge array Charge array
+ * @return void
+ */
 void mc_method(dim *position_arr, dim *nearest, int *charge) {
     double *energy_ar = (double*)malloc(sizeof(double) * nmax);
     register int i = 0;
@@ -194,7 +273,7 @@ void mc_method(dim *position_arr, dim *nearest, int *charge) {
         dim *tmp = (dim*)malloc(sizeof(dim)*particles_count);
         memcpy(tmp, position_arr, sizeof(dim)*particles_count);
         for (int particle = 0; particle < particles_count; particle++) {
-            //ofsset between -max_deviation/2 and max_deviation/2
+            /** ofsset between -max_deviation/2 and max_deviation/2 */
             double ex = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
             double ey = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;
             double ez = (double)rand() / (double)RAND_MAX * max_deviation - max_deviation / 2;

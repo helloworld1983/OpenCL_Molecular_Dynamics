@@ -4,6 +4,8 @@
 #define particles_count 256
 #define nmax 8000
 #define total_it 16000
-#define Temperature 1.3
-#define initial_dist_by_one_axis 1.6
+#define Temperature 1.3f
+#define initial_dist_by_one_axis 1.6f
 #define initial_dist_to_edge 4
+#define SIGMA 0.221f
+#define DERIVATIVE_ERF 2.556f
